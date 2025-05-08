@@ -1,3 +1,4 @@
+import 'package:fe_capstone/firebase_msg.dart';
 import 'package:fe_capstone/ui/screens/ForgotPasswordScreen.dart';
 import 'package:fe_capstone/ui/screens/RegisterScreen.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ class LoginScreen1 extends StatefulWidget {
 class _LoginScreen1State extends State<LoginScreen1> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final DataService _dataService = DataService();
   bool _obscurePassword = true;
 
@@ -26,17 +28,27 @@ class _LoginScreen1State extends State<LoginScreen1> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
 
+      // Lấy FCM token và đăng ký thiết bị
+      final firebaseMsg = FirebaseMsg();
+      String? token = await firebaseMsg.getDeviceToken();
+      if (token != null) {
+        await _dataService.registerDevice(token);
+      } else {
+        print('Không lấy được FCM token');
+      }
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => HomeScreen1()),
       );
     } catch (e) {
+      final errorMessage = e.toString().replaceFirst('Exception: ', '');
       showDialog(
         context: context,
         builder: (context) {
           return AlertDialog(
             title: Text("Lỗi"),
-            content: Text("Đăng nhập thất bại. Vui lòng thử lại."),
+            content: Text(errorMessage),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -47,6 +59,64 @@ class _LoginScreen1State extends State<LoginScreen1> {
         },
       );
     }
+  }
+
+  Future<void> _showForgotPasswordDialog() async {
+    _emailController.clear();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Quên mật khẩu"),
+          content: TextField(
+            controller: _emailController,
+            decoration: InputDecoration(
+              labelText: "Nhập email",
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            keyboardType: TextInputType.emailAddress,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text("Hủy"),
+            ),
+            TextButton(
+              onPressed: () async {
+                final email = _emailController.text.trim();
+                if (email.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Vui lòng nhập email")),
+                  );
+                  return;
+                }
+                try {
+                  await _dataService.forgotPassword(email);
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Vui lòng kiểm tra lại email của bạn"),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  final errorMessage = e.toString().replaceFirst('Exception: ', '');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(errorMessage),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: Text("Gửi"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -117,14 +187,7 @@ class _LoginScreen1State extends State<LoginScreen1> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ForgotPasswordScreen(),
-                        ),
-                      );
-                    },
+                    onPressed: _showForgotPasswordDialog,
                     child: const Text(
                       "Quên mật khẩu ?",
                       style: TextStyle(color: Colors.green, fontSize: 14),

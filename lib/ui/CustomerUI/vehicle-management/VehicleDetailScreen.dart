@@ -36,8 +36,12 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
         letter = '';
         numbers = cleaned.substring(2);
       }
-      String firstPart = numbers.length >= 3 ? numbers.substring(0, numbers.length > 3 ? 3 : numbers.length) : numbers;
-      String secondPart = numbers.length > 3 ? numbers.substring(3, numbers.length > 5 ? 5 : numbers.length) : '';
+      String firstPart = numbers.length >= 3
+          ? numbers.substring(0, numbers.length > 3 ? 3 : numbers.length)
+          : numbers;
+      String secondPart = numbers.length > 3
+          ? numbers.substring(3, numbers.length > 5 ? 5 : numbers.length)
+          : '';
       String formatted = prefix;
       if (letter.isNotEmpty) {
         formatted += letter;
@@ -56,16 +60,13 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   // Hàm xử lý cập nhật xe
   Future<void> _updateCar() async {
     if (_formKey.currentState!.validate()) {
-      // Định dạng lại biển số xe trước khi gửi
       _editableCar = _editableCar.copyWith(
         licensePlate: _formatLicensePlate(_editableCar.licensePlate),
       );
 
       try {
-        // Thực hiện cập nhật bất đồng bộ
         final updatedCar = await _dataService.updateCar(_editableCar);
 
-        // Sau khi cập nhật thành công, gọi setState đồng bộ
         setState(() {
           _isEditing = false;
           _futureCar = Future.value(updatedCar);
@@ -88,7 +89,8 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        title: Text('Thông tin xe', style: TextStyle(fontWeight: FontWeight.bold)),
+        title:
+            Text('Thông tin xe', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.green.shade700,
         actions: [
           IconButton(
@@ -142,18 +144,19 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                     borderRadius: BorderRadius.circular(12),
                     child: car.thumbnail?.isNotEmpty == true
                         ? CachedNetworkImage(
-                      imageUrl: car.thumbnail!,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: 180,
-                      placeholder: (context, url) => Container(
-                        color: Colors.grey[200],
-                        child: Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                      ),
-                      errorWidget: (context, url, error) => _buildPlaceholderImage(),
-                    )
+                            imageUrl: car.thumbnail!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: 180,
+                            placeholder: (context, url) => Container(
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) =>
+                                _buildPlaceholderImage(),
+                          )
                         : _buildPlaceholderImage(),
                   ),
                 ),
@@ -173,11 +176,14 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   Widget _buildDetailView(Car car) {
     return Column(
       children: [
-        _infoTile('Model', car.model),
+        // _infoTile('Tên xe', car.model),
+        _infoTile('Thương hiệu', car.brand),
+        _infoTile('Model xe ', car.model),
         _infoTile('Biển số', car.licensePlate),
         _infoTile('Màu sắc', car.color),
         // _infoTile('Ngày đăng ký', car.registedDate),
-        _infoTile('Trạng thái', car.status ? 'Hoạt động' : 'Không hoạt động'),
+        // _infoTile('Trạng thái', car.status ? 'Hoạt động' : 'Không hoạt động'),
+        _infoTile('Mô tả', car.color),
         if (car.entrance != null) ...[
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
@@ -210,54 +216,47 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       key: _formKey,
       child: Column(
         children: [
-          _textField('Model', _editableCar.model,
-                  (value) => _editableCar = _editableCar.copyWith(model: value)),
-          _textField(
-            'Biển số',
-            _editableCar.licensePlate,
-                (value) => _editableCar = _editableCar.copyWith(licensePlate: value),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-              LengthLimitingTextInputFormatter(8),
-              TextInputFormatter.withFunction((oldValue, newValue) {
-                String formatted = _formatLicensePlate(newValue.text);
-                return TextEditingValue(
-                  text: formatted,
-                  selection: TextSelection.collapsed(offset: formatted.length),
-                );
-              }),
-            ],
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Vui lòng nhập biển số xe';
-              }
-              final platePattern = RegExp(r'^\d{2}[A-Za-z]-\d{3}\.\d{2}$');
-              if (!platePattern.hasMatch(value)) {
-                return 'Biển số xe không đúng định dạng (VD: XXA-XXX.XX)';
-              }
-              return null;
-            },
+          _textField('Thương hiệu', _editableCar.brand,
+              (value) => _editableCar = _editableCar.copyWith(brand: value)),
+          _textField('Model xe', _editableCar.model,
+              (value) => _editableCar = _editableCar.copyWith(model: value)),
+
+          // Biển số: chỉ hiển thị, không cho sửa
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: TextFormField(
+              initialValue: _editableCar.licensePlate,
+              decoration: InputDecoration(
+                labelText: 'Biển số',
+                border: OutlineInputBorder(),
+                filled: true,
+                fillColor: Colors.grey.shade200,
+              ),
+              enabled: false,
+            ),
           ),
+
           _textField('Màu sắc', _editableCar.color,
-                  (value) => _editableCar = _editableCar.copyWith(color: value)),
-          SwitchListTile(
-            title: Text('Trạng thái hoạt động'),
-            value: _editableCar.status,
-            onChanged: (value) => setState(
-                    () => _editableCar = _editableCar.copyWith(status: value)),
-          ),
+              (value) => _editableCar = _editableCar.copyWith(color: value)),
+
+          // SwitchListTile(
+          //   title: Text('Trạng thái hoạt động'),
+          //   value: _editableCar.status,
+          //   onChanged: (value) => setState(
+          //       () => _editableCar = _editableCar.copyWith(status: value)),
+          // ),
         ],
       ),
     );
   }
 
   Widget _textField(
-      String label,
-      String initialValue,
-      Function(String) onChanged, {
-        List<TextInputFormatter>? inputFormatters,
-        String? Function(String?)? validator,
-      }) {
+    String label,
+    String initialValue,
+    Function(String) onChanged, {
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextFormField(
@@ -269,7 +268,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
           fillColor: Colors.white,
         ),
         inputFormatters: inputFormatters,
-        validator: validator ?? (value) => value == null || value.isEmpty ? 'Không được bỏ trống' : null,
+        validator: validator ??
+            (value) =>
+                value == null || value.isEmpty ? 'Không được bỏ trống' : null,
         onChanged: onChanged,
       ),
     );
@@ -301,6 +302,7 @@ extension CarCopyWith on Car {
     int? customerId,
     String? model,
     String? color,
+    String? brand,
     String? licensePlate,
     String? registedDate,
     bool? status,
@@ -317,6 +319,7 @@ extension CarCopyWith on Car {
       status: status ?? this.status,
       contracts: contracts ?? this.contracts,
       customer: customer ?? this.customer,
+      brand: brand ?? this.brand,
     );
   }
 }

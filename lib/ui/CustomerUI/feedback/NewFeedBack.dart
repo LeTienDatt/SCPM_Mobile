@@ -1,7 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:fe_capstone/service/data_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class NewFeedbackScreen extends StatelessWidget {
+class NewFeedbackScreen extends StatefulWidget {
+  @override
+  _NewFeedbackScreenState createState() => _NewFeedbackScreenState();
+}
+
+class _NewFeedbackScreenState extends State<NewFeedbackScreen> {
   final TextEditingController feedbackController = TextEditingController();
+
+  @override
+  void dispose() {
+    feedbackController.dispose(); // Đừng quên dispose khi widget bị hủy
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,11 +91,53 @@ class NewFeedbackScreen extends StatelessWidget {
                   width: 150,
                   height: 40,
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
+                    onPressed: () async {
+                      final message = feedbackController.text.trim();
+                      if (message.isEmpty) {
+                        await showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Không thể gửi!'),
+                            content: const Text('Vui lòng nhập nội dung...'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        return;
+                      }
+
+                      try {
+                        final prefs = await SharedPreferences.getInstance();
+                        final customerId = prefs.getInt('ownerId');
+
+                        if (customerId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'Không tìm thấy thông tin người dùng')),
+                          );
+                          return;
+                        }
+
+                        final dataService = DataService();
+                        await dataService.sendFeedback(customerId, message);
+
+                        Navigator.pop(context);
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content:
+                                  Text('Lỗi gửi phản hồi: ${e.toString()}')),
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey,
+                      backgroundColor: Colors.green,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(18),
                       ),

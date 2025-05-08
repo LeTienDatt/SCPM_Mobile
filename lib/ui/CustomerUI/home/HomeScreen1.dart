@@ -1,5 +1,10 @@
 import 'dart:async';
 
+import 'package:fe_capstone/ui/ChatScreen.dart';
+
+import 'package:fe_capstone/ui/CustomerUI/PaymentHistoryScreen.dart';
+import 'package:fe_capstone/ui/CustomerUI/chat/ChatScreenSCPM.dart';
+import 'package:fe_capstone/ui/CustomerUI/chat/WebView.dart';
 import 'package:fe_capstone/ui/CustomerUI/vehicle-management/VehicleManagementScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -100,55 +105,29 @@ class _HomeScreenState extends State<HomeScreen1> {
             ),
           ),
         ),
-        title: const Text(
-          "SCPM",
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
+        title: RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: 'SC',
+                style: TextStyle(
+                  color: Colors.green,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextSpan(
+                text: 'PM',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
         ),
         centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20, top: 10),
-            child: Stack(
-              children: [
-                const Icon(
-                  Icons.notifications_none,
-                  color: Color.fromARGB(255, 235, 110, 101),
-                  size: 35,
-                ),
-                Positioned(
-                  right: 0,
-                  top: 5,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: const Center(
-                      child: Text(
-                        '2',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -184,9 +163,10 @@ class _HomeScreenState extends State<HomeScreen1> {
                     iconColor: Color.fromARGB(255, 130, 187, 233),
                   ),
                   _buildCard(
-                    Icons.notifications_active_outlined,
-                    "Thông báo",
-                    () {},
+                    Icons.history_toggle_off_sharp,
+                    "Lịch sử",
+                    () => _handleProtectedNavigation(context,
+                        PaymentHistoryScreen()), // Updated to navigate to PaymentHistoryScreen
                     iconColor: const Color.fromARGB(255, 235, 110, 101),
                   ),
                 ],
@@ -227,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen1> {
                           itemCount: 3,
                           itemBuilder: (context, index) {
                             final images = [
-                              'https://hungvuongphat.com/wp-content/uploads/2021/07/mo-hinh-bai-giu-xe-thong-minh.jpg',
+                              'https://baigiuxethongminh.vn/wp-content/uploads/2020/03/bai-giu-xe-thong-minh-vietparking.jpg',
                               'https://vending-cdn.kootoro.com/torov-cms/upload/image/1672300550330-d%C3%A1n%20decal%20qu%E1%BA%A3ng%20c%C3%A1o%20%C3%B4%20t%C3%B4.jpg',
                               'https://bcp.cdnchinhphu.vn/334894974524682240/2022/4/1/b60a911bf638239b911a077c0744ec96-16488114501631594628377.jpg',
                             ];
@@ -289,12 +269,26 @@ class _HomeScreenState extends State<HomeScreen1> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: Colors.green,
+        onPressed: () async {
+          final prefs = await SharedPreferences.getInstance();
+          final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+          final customerId = isLoggedIn ? (prefs.getInt('ownerId') ?? 0) : 0;
+
+          final url =
+              'https://scpmbe-hrhheedhh7gmatev.southeastasia-01.azurewebsites.net/api/Customer/$customerId/chat';
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChatWebViewScreen(url),
+            ),
+          );
+        },
+        backgroundColor: Colors.white,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(25),
           child: Image.network(
-            'https://static.vecteezy.com/system/resources/previews/005/064/963/non_2x/letter-p-alphabet-natural-green-icons-leaf-logo-free-vector.jpg',
+            'https://cdn-icons-png.flaticon.com/512/6066/6066674.png',
             width: 50,
             height: 50,
             fit: BoxFit.cover,
@@ -333,4 +327,57 @@ class _HomeScreenState extends State<HomeScreen1> {
       ),
     );
   }
+}
+
+Widget _buildNotificationCard({
+  required String contractName,
+  required String paymentTime,
+  required bool isPaid,
+}) {
+  return Container(
+    margin: const EdgeInsets.symmetric(vertical: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: Colors.grey.shade300),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 6,
+          offset: Offset(0, 2),
+        )
+      ],
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.directions_car, size: 40, color: Colors.blue),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                contractName,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 4),
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isPaid ? Colors.green : Colors.red,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            isPaid ? 'Đã duyệt' : 'Từ chối',
+            style: TextStyle(color: Colors.white, fontSize: 12),
+          ),
+        ),
+      ],
+    ),
+  );
 }

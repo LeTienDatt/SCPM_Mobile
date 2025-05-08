@@ -13,7 +13,8 @@ class NewVehicleScreen extends StatefulWidget {
 }
 
 class _NewVehicleScreenState extends State<NewVehicleScreen> {
-  final TextEditingController _brandController = TextEditingController(text: "");
+  final TextEditingController _brandController =
+      TextEditingController(text: "");
   final DataService _dataService = DataService();
   File? _image;
   String? _thumbnailUrl; // Lưu URL của hình ảnh sau khi upload
@@ -25,13 +26,15 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _colorController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _brandTextController = TextEditingController();
 
   String _selectedBrand = "BMW";
   bool _status = true;
   final List<String> _brands = ["BMW", "Mercedes", "Toyota", "Honda", "Ford"];
 
   Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
@@ -71,8 +74,12 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
         letter = '';
         numbers = cleaned.substring(2);
       }
-      String firstPart = numbers.length >= 3 ? numbers.substring(0, numbers.length > 3 ? 3 : numbers.length) : numbers;
-      String secondPart = numbers.length > 3 ? numbers.substring(3, numbers.length > 5 ? 5 : numbers.length) : '';
+      String firstPart = numbers.length >= 3
+          ? numbers.substring(0, numbers.length > 3 ? 3 : numbers.length)
+          : numbers;
+      String secondPart = numbers.length > 3
+          ? numbers.substring(3, numbers.length > 5 ? 5 : numbers.length)
+          : '';
       String formatted = prefix;
       if (letter.isNotEmpty) {
         formatted += letter;
@@ -92,8 +99,12 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
     String cleaned = value.replaceAll(RegExp(r'[^0-9]'), '');
     if (cleaned.length >= 2) {
       String day = cleaned.substring(0, 2);
-      String month = cleaned.length > 2 ? cleaned.substring(2, cleaned.length > 4 ? 4 : cleaned.length) : '';
-      String year = cleaned.length > 4 ? cleaned.substring(4, cleaned.length > 8 ? 8 : cleaned.length) : '';
+      String month = cleaned.length > 2
+          ? cleaned.substring(2, cleaned.length > 4 ? 4 : cleaned.length)
+          : '';
+      String year = cleaned.length > 4
+          ? cleaned.substring(4, cleaned.length > 8 ? 8 : cleaned.length)
+          : '';
 
       String formatted = day;
       if (month.isNotEmpty) {
@@ -108,8 +119,27 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
   }
 
   Future<void> _submitForm() async {
+    if (_thumbnailUrl == null) {
+      // ✅ kiểm tra bắt buộc có hình
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Thông báo'),
+          content: const Text('Vui lòng chọn hình ảnh cho xe!'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Đóng'),
+            ),
+          ],
+        ),
+      );
+      return;
+
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
-      // Kiểm tra nếu đang upload hình ảnh
       if (_isUploading) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Đang tải hình ảnh, vui lòng chờ!')),
@@ -139,21 +169,31 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
           customer: null,
           entrance: null,
           thumbnail: _thumbnailUrl,
+          brand: _brandTextController.text,
         );
 
         await _dataService.addCar(newCar);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Thêm xe thành công!')),
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Thêm xe thành công!'),
+            content: const Text('Xe của bạn đã được thêm vào hệ thống.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context, true);
+                },
+                child: const Text('Đóng'),
+              ),
+            ],
+          ),
         );
-        Navigator.pop(context, true);
       } catch (e) {
-        String errorMessage = 'Thêm xe thất bại';
-
-        // Kiểm tra nếu lỗi là DioError và có response
+        String errorMessage = 'Vui lòng nhập lại... ';
         if (e is DioError && e.response != null) {
           if (e.response!.statusCode == 400) {
-            // Parse thông báo lỗi từ response
             final responseData = e.response!.data;
             if (responseData is Map && responseData.containsKey('message')) {
               errorMessage = responseData['message'];
@@ -163,9 +203,23 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
           }
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
+        // Show Popup thay vì SnackBar
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text('Biển số đã tồn tại !'),
+              content: Text(errorMessage),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Đóng'),
+                ),
+              ],
+            );
+          },
         );
+
         print("Lỗi khi thêm xe: ${e.toString()}");
       }
     }
@@ -197,7 +251,7 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
               children: [
                 // Image Picker
                 GestureDetector(
-                  onTap: _isUploading ? null : _pickImage, // Vô hiệu hóa khi đang upload
+                  onTap: _isUploading ? null : _pickImage,
                   child: Container(
                     height: 200,
                     width: 214,
@@ -207,60 +261,78 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
                     ),
                     child: _isUploading
                         ? const Center(
-                      child: CircularProgressIndicator(),
-                    )
+                            child: CircularProgressIndicator(),
+                          )
                         : _image == null
-                        ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.camera_alt, size: 100, color: Colors.grey),
-                        const SizedBox(height: 8),
-                        const Text(
-                          "Chọn hình ảnh",
-                          style: TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    )
-                        : _thumbnailUrl != null
-                        ? ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: CachedNetworkImage(
-                        imageUrl: _thumbnailUrl!,
-                        fit: BoxFit.cover,
-                        width: 214,
-                        height: 200,
-                        placeholder: (context, url) => const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Colors.grey[200],
-                          child: Icon(
-                            Icons.error,
-                            color: Colors.red,
-                            size: 50,
-                          ),
-                        ),
-                      ),
-                    )
-                        : ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.file(_image!, fit: BoxFit.cover),
-                    ),
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.camera_alt,
+                                      size: 100, color: Colors.grey),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    "Chọn hình ảnh",
+                                    style: TextStyle(
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              )
+                            : _thumbnailUrl != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: CachedNetworkImage(
+                                      imageUrl: _thumbnailUrl!,
+                                      fit: BoxFit.cover,
+                                      width: 214,
+                                      height: 200,
+                                      placeholder: (context, url) =>
+                                          const Center(
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                      errorWidget: (context, url, error) =>
+                                          Container(
+                                        color: Colors.grey[200],
+                                        child: Icon(
+                                          Icons.error,
+                                          color: Colors.red,
+                                          size: 50,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child:
+                                        Image.file(_image!, fit: BoxFit.cover),
+                                  ),
                   ),
                 ),
                 const SizedBox(height: 30),
+                // _buildTextField(
+                //   "Tên xe",
+                //   _brandController,
+                //   validator: (value) {
+                //     if (value == null || value.isEmpty) {
+                //       return 'Vui lòng nhập tên xe';
+                //     }
+                //     return null;
+                //   },
+                // ),
+
+                const SizedBox(height: 20),
+
                 _buildTextField(
-                  "Hãng xe",
-                  _brandController,
+                  "Thương hiệu",
+                  _brandTextController,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Vui lòng nhập hãng xe';
+                      return 'Vui lòng nhập thương hiệu';
                     }
                     return null;
                   },
                 ),
+
                 const SizedBox(height: 20),
                 _buildTextField(
                   "Model xe",
@@ -283,7 +355,8 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
                       String formatted = _formatLicensePlate(newValue.text);
                       return TextEditingValue(
                         text: formatted,
-                        selection: TextSelection.collapsed(offset: formatted.length),
+                        selection:
+                            TextSelection.collapsed(offset: formatted.length),
                       );
                     }),
                   ],
@@ -291,7 +364,8 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Vui lòng nhập biển số xe';
                     }
-                    final platePattern = RegExp(r'^\d{2}[A-Za-z]-\d{3}\.\d{2}$');
+                    final platePattern =
+                        RegExp(r'^\d{2}[A-Za-z]-\d{3}\.\d{2}$');
                     if (!platePattern.hasMatch(value)) {
                       return 'Biển số xe không đúng định dạng (VD: XXA-XXX.XX)';
                     }
@@ -301,48 +375,6 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    // Expanded(
-                    //   child: _buildTextField(
-                    //     "Ngày đăng ký",
-                    //     _dateController,
-                    //     hintText: "dd/mm/YYYY",
-                    //     inputFormatters: [
-                    //       FilteringTextInputFormatter.digitsOnly,
-                    //       LengthLimitingTextInputFormatter(8),
-                    //       TextInputFormatter.withFunction((oldValue, newValue) {
-                    //         String formatted = _formatDate(newValue.text);
-                    //         return TextEditingValue(
-                    //           text: formatted,
-                    //           selection: TextSelection.collapsed(offset: formatted.length),
-                    //         );
-                    //       }),
-                    //     ],
-                    //     validator: (value) {
-                    //       if (value == null || value.isEmpty) {
-                    //         return 'Vui lòng nhập ngày đăng ký';
-                    //       }
-                    //       final datePattern = RegExp(r'^\d{2}/\d{2}/\d{4}$');
-                    //       if (!datePattern.hasMatch(value)) {
-                    //         return 'Ngày không đúng định dạng (VD: dd/mm/YYYY)';
-                    //       }
-                    //       final parts = value.split('/');
-                    //       final day = int.tryParse(parts[0]) ?? 0;
-                    //       final month = int.tryParse(parts[1]) ?? 0;
-                    //       final year = int.tryParse(parts[2]) ?? 0;
-                    //       if (day < 1 || day > 31) {
-                    //         return 'Ngày phải từ 01 đến 31';
-                    //       }
-                    //       if (month < 1 || month > 12) {
-                    //         return 'Tháng phải từ 01 đến 12';
-                    //       }
-                    //       if (year < 1900 || year > DateTime.now().year) {
-                    //         return 'Năm không hợp lệ';
-                    //       }
-                    //       return null;
-                    //     },
-                    //   ),
-                    // ),
-                    // const SizedBox(width: 10),
                     Expanded(
                       child: _buildTextField(
                         "Màu sắc",
@@ -358,23 +390,8 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                SwitchListTile(
-                  title: const Text("Trạng thái hoạt động"),
-                  value: _status,
-                  onChanged: (value) {
-                    setState(() {
-                      _status = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
-                _buildTextField(
-                  "Mô tả (nếu có)",
-                  _descriptionController,
-                  maxLines: 3,
-                  hintText: "Xe có bị gì không...",
-                ),
+
+                // ),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: 234,
@@ -404,13 +421,13 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
   }
 
   Widget _buildTextField(
-      String label,
-      TextEditingController controller, {
-        int maxLines = 1,
-        String? hintText,
-        String? Function(String?)? validator,
-        List<TextInputFormatter>? inputFormatters,
-      }) {
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+    String? hintText,
+    String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
@@ -425,11 +442,11 @@ class _NewVehicleScreenState extends State<NewVehicleScreen> {
   }
 
   Widget _buildDropdownField(
-      String label,
-      String value,
-      ValueChanged<String?> onChanged,
-      List<String> items,
-      ) {
+    String label,
+    String value,
+    ValueChanged<String?> onChanged,
+    List<String> items,
+  ) {
     return DropdownButtonFormField<String>(
       value: value,
       items: items.map((brand) {

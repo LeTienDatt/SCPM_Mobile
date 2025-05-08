@@ -1,4 +1,8 @@
+import 'package:fe_capstone/service/data_service.dart';
+import 'package:fe_capstone/ui/CustomerUI/chat/WebView.dart';
 import 'package:fe_capstone/ui/CustomerUI/home/HomeScreen1.dart';
+import 'package:fe_capstone/ui/CustomerUI/profile/ProfileDetailScreen.dart';
+import 'package:fe_capstone/ui/screens/ChangePasswordScreen.dart';
 import 'package:fe_capstone/ui/screens/LoginScreen1.dart';
 import 'package:flutter/material.dart';
 import 'package:fe_capstone/ui/components/bottomAppBar/CustomFooter.dart';
@@ -22,7 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      username = prefs.getString('username') ?? 'tiendat';
+      username = prefs.getString('username') ?? '';
       email = prefs.getString('email') ?? '';
     });
   }
@@ -30,11 +34,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
-    // Chuyển hướng về màn hình login
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => LoginScreen1()),
-          (route) => false,
+      (route) => false,
     );
   }
 
@@ -45,6 +48,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         elevation: 0,
         backgroundColor: Colors.white,
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
         title: const Text(
           "SPCM",
           style: TextStyle(
@@ -71,53 +80,90 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 30,
-                    backgroundImage: AssetImage("assets/images/profile1.webp"),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          username,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          email,
-                          style: TextStyle(
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ],
+              child: GestureDetector(
+                onTap: () async {
+                  try {
+                    final prefs = await SharedPreferences.getInstance();
+                    final customerId = prefs.getInt('ownerId');
+
+                    if (customerId == null) {
+                      throw Exception('Không tìm thấy ID người dùng');
+                    }
+
+                    final dataService = DataService();
+                    final userData =
+                        await dataService.getCustomerById(customerId);
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ProfileDetailScreen(userData: userData),
+                      ),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Lỗi tải thông tin người dùng: $e'),
+                      ),
+                    );
+                  }
+                },
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      radius: 30,
+                      backgroundImage:
+                          AssetImage("assets/images/profile1.webp"),
                     ),
-                  ),
-                  const Icon(Icons.notifications_none, color: Colors.black),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            username,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            email,
+                            style: const TextStyle(
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: Colors.black),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 16),
-
-            // Menu List
             Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 children: [
-                  _buildMenuItem(Icons.lock_outline, "Mật Khẩu"),
-                  _buildMenuItem(Icons.phone_outlined, "Phone"),
-                  _buildMenuItem(Icons.location_on_outlined, "Địa chỉ"),
+                  _buildMenuItem(
+                    Icons.lock_outline,
+                    "Mật Khẩu",
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChangePasswordScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildMenuItem(Icons.phone_outlined, "Phone", () {}),
+                  _buildMenuItem(Icons.location_on_outlined, "Địa chỉ", () {}),
                 ],
               ),
             ),
-
             const SizedBox(height: 100),
             SizedBox(
               width: 140,
@@ -145,14 +191,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
-
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: Colors.green,
-        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () async {
+          final prefs = await SharedPreferences.getInstance();
+          final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+          final customerId = isLoggedIn ? (prefs.getInt('ownerId') ?? 0) : 0;
+
+          final url =
+              'https://scpmbe-hrhheedhh7gmatev.southeastasia-01.azurewebsites.net/api/Customer/$customerId/chat';
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChatWebViewScreen(url),
+            ),
+          );
+        },
+        backgroundColor: Colors.white,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: Image.network(
+            'https://cdn-icons-png.flaticon.com/512/6066/6066674.png',
+            width: 50,
+            height: 50,
+            fit: BoxFit.cover,
+          ),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
       bottomNavigationBar: CustomFooter(
         selectedIndex: 0,
         onItemTapped: (index) {},
@@ -160,7 +226,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildMenuItem(IconData icon, String title) {
+  Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: Colors.black54),
       title: Text(
@@ -168,8 +234,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
       ),
       trailing:
-      const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.black54),
-      onTap: () {},
+          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.black54),
+      onTap: onTap,
     );
   }
 }

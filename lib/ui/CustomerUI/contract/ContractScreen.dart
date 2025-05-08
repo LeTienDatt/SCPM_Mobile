@@ -2,6 +2,7 @@ import 'package:fe_capstone/models/Contract.dart';
 import 'package:fe_capstone/models/car_model.dart';
 import 'package:fe_capstone/service/data_service.dart';
 import 'package:fe_capstone/ui/CustomerUI/contract/ContractDetailScreen.dart';
+import 'package:fe_capstone/ui/CustomerUI/home/HomeScreen1.dart';
 import 'package:fe_capstone/ui/CustomerUI/parking-management/ListParkingScreen.dart';
 import 'package:fe_capstone/ui/CustomerUI/payment/PaymentScreen.dart';
 import 'package:fe_capstone/ui/components/bottomAppBar/CustomFooter.dart';
@@ -75,17 +76,22 @@ class _ContractScreenState extends State<ContractScreen> {
         ),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.black),
-          onPressed: () {},
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen1()),
+            );
+          },
         ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              backgroundImage: AssetImage("assets/images/profile1.webp"),
-            ),
-          ),
-        ],
+        // actions: const [
+        //   Padding(
+        //     padding: EdgeInsets.only(right: 16),
+        //     child: CircleAvatar(
+        //       backgroundImage: AssetImage("assets/images/profile1.webp"),
+        //     ),
+        //   ),
+        // ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -110,7 +116,24 @@ class _ContractScreenState extends State<ContractScreen> {
                   } else if (snapshot.hasError) {
                     return Center(child: Text('Error: ${snapshot.error}'));
                   } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text('Không có hợp đồng nào'));
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.network(
+                            'https://zencomex.com/assets/products/empty.png',
+                            width: 200,
+                            height: 200,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Chưa có hợp đồng !!!',
+                            style: TextStyle(fontSize: 13, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    );
                   } else {
                     final contracts = snapshot.data!;
                     return ListView.builder(
@@ -205,7 +228,8 @@ class _ContractScreenState extends State<ContractScreen> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: SizedBox( // Thêm SizedBox để cố định kích thước
+              child: SizedBox(
+                // Thêm SizedBox để cố định kích thước
                 width: 50,
                 height: 50,
                 child: Image.network(
@@ -220,7 +244,8 @@ class _ContractScreenState extends State<ContractScreen> {
                       child: Center(
                         child: CircularProgressIndicator(
                           value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
                               : null,
                         ),
                       ),
@@ -238,13 +263,13 @@ class _ContractScreenState extends State<ContractScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 11.5),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Hợp Đồng Xe ${contract.car.model}",
+                    "Hợp đồng xe ${contract.car.model}",
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -257,7 +282,7 @@ class _ContractScreenState extends State<ContractScreen> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          "Bãi ${contract.parkingSpaceName}",
+                          "Vị trí: ${contract.parkingSpaceName}",
                           style: const TextStyle(
                             fontSize: 12,
                             color: Colors.black54,
@@ -347,6 +372,8 @@ class _ContractScreenState extends State<ContractScreen> {
         return 'Từ chối';
       case 'Paid':
         return 'Đã thanh toán';
+      case 'PendingActivation':
+        return 'Chờ hiệu lực';
       case 'Active':
         return 'Đang hoạt động';
       default:
@@ -364,6 +391,8 @@ class _ContractScreenState extends State<ContractScreen> {
         return Colors.red;
       case 'Paid':
         return Colors.purple;
+      case 'PendingActivation':
+        return Colors.blue;
       case 'Active':
         return Colors.blue;
       default:
